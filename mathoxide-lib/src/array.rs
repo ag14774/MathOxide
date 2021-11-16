@@ -1,10 +1,11 @@
-use crate::storage::Storage;
-use crate::views;
-use crate::views::ArrayView;
+use std::fmt;
 
 use num_traits::Num;
 
-use std::fmt;
+use crate::formatter::{ArrayFormatter, VerboseFormatter};
+use crate::storage::Storage;
+use crate::views;
+use crate::views::ArrayView;
 
 pub struct Array<StorageType, ViewType> {
     storage: StorageType,
@@ -20,7 +21,9 @@ where
     fn offset(&self) -> usize {
         self.view.offset()
     }
-    // fn stride(&self) -> &[usize];
+
+    // TODO: fn stride(&self) -> &[usize];
+
     fn ndims(&self) -> usize {
         self.view.ndims()
     }
@@ -40,56 +43,11 @@ where
     StorageType: Storage<Stored = T>,
     ViewType: ArrayView,
 {
-    // TODO: Rewrite this when more helper methods are available
-    // Try to match numpy's behavior for ndarray formatting
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = String::new();
         match self.storage.storage_get() {
-            Ok(arr) => match self.ndims() {
-                2 => {
-                    let mut s = String::new();
-                    let nrows = self.shape()[0];
-                    let ncols = self.shape()[1];
-                    for row in 0usize..nrows {
-                        let start = self.view.translate([row, 0]);
-                        let end = self.view.translate([row + 1, 0]);
-                        s.push(match row {
-                            0 => '[',
-                            _ => ' ',
-                        });
-                        s.push_str(
-                            format!(
-                                "[{}]",
-                                &arr[start..end]
-                                    .iter()
-                                    .map(|x| x.to_string())
-                                    .collect::<Vec<String>>()
-                                    .join(",")
-                            )
-                            .as_str(),
-                        );
-                        if row == nrows - 1 {
-                            s.push(']');
-                        } else {
-                            s.push('\n');
-                        }
-                    }
-                    write!(f, "{}", s)
-                }
-                _ => {
-                    write!(
-                        f,
-                        "[{}]",
-                        arr.iter()
-                            .map(|x| x.to_string())
-                            .collect::<Vec<String>>()
-                            .join(",")
-                    )
-                }
-            },
-            Err(err) => {
-                write!(f, "error while formatting array: {}", err)
-            }
+            // Difference between &[..] and as_slice? Why as_slice not working?
+            Ok(arr) => VerboseFormatter::<'_, T, ViewType>::new(&arr[..], &self.view).format(f),
+            Err(err) => write!(f, "error while formatting array: {}", err),
         }
     }
 }

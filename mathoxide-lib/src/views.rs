@@ -8,13 +8,13 @@ pub trait ArrayView {
 }
 
 pub struct SimpleView {
-    _shape: Vec<usize>,
+    shape: Vec<usize>,
 }
 
 impl SimpleView {
     pub fn new<ListType: AsRef<[usize]>>(shape: ListType) -> Self {
         Self {
-            _shape: shape.as_ref().to_vec(),
+            shape: shape.as_ref().to_vec(),
         }
     }
 }
@@ -22,7 +22,7 @@ impl SimpleView {
 impl ArrayView for SimpleView {
     fn translate<ListType: AsRef<[usize]>>(&self, idx: ListType) -> usize {
         let mut res: usize = 0;
-        for (idx_i, shape_i) in idx.as_ref().iter().zip(self._shape.iter()) {
+        for (idx_i, shape_i) in idx.as_ref().iter().zip(self.shape.iter()) {
             res *= shape_i;
             res += idx_i;
         }
@@ -34,15 +34,15 @@ impl ArrayView for SimpleView {
     }
 
     fn ndims(&self) -> usize {
-        self._shape.len()
+        self.shape.len()
     }
 
     fn size(&self) -> usize {
-        self._shape.iter().product()
+        self.shape.iter().product()
     }
 
     fn shape(&self) -> &[usize] {
-        self._shape.as_slice()
+        self.shape.as_slice()
     }
 }
 
@@ -51,10 +51,10 @@ mod test {
     use super::*;
 
     #[test]
-    fn it_works() {
+    fn check_last_item() {
         let view = SimpleView::new([2, 3, 4]);
-
-        // Check last item
         assert_eq!(view.translate([1, 2, 3]), view.size() - 1);
     }
+
+    // TODO: Add more tests
 }
