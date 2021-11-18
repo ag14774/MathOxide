@@ -1,47 +1,77 @@
 pub trait ArrayView {
     fn translate<ListType: AsRef<[usize]>>(&self, idx: ListType) -> usize;
     fn offset(&self) -> usize;
-    fn ndims(&self) -> usize;
-    fn size(&self) -> usize;
     fn shape(&self) -> &[usize];
+    fn stride(&self) -> &[usize];
+    fn ndim(&self) -> usize {
+        self.shape().len()
+    }
+    fn numel(&self) -> usize {
+        self.shape().iter().product()
+    }
+    fn is_contiguous(&self) -> bool;
 }
 
-pub struct SimpleView {
+pub struct ContiguousView {
     shape: Vec<usize>,
+    offset: usize,
+    stride: Vec<usize>,
 }
 
-impl SimpleView {
+impl ContiguousView {
     pub fn new<ListType: AsRef<[usize]>>(shape: ListType) -> Self {
+        Self::new_with_offset(shape, 0)
+    }
+
+    pub fn new_with_offset<ListType: AsRef<[usize]>>(shape: ListType, offset: usize) -> Self {
         Self {
             shape: shape.as_ref().to_vec(),
+            offset,
+            stride: Self::compute_stride(shape.as_ref()),
         }
+    }
+
+    fn compute_stride<ListType: AsRef<[usize]>>(shape: ListType) -> Vec<usize> {
+        let mut res = shape
+            .as_ref()
+            .iter()
+            .rev()
+            .scan(1, |state, &x| {
+                let tmp = *state;
+                *state = *state * x;
+                Some(tmp)
+            })
+            .collect::<Vec<usize>>();
+        res.reverse();
+        res
     }
 }
 
-impl ArrayView for SimpleView {
+impl ArrayView for ContiguousView {
     fn translate<ListType: AsRef<[usize]>>(&self, idx: ListType) -> usize {
-        let mut res: usize = 0;
-        for (idx_i, shape_i) in idx.as_ref().iter().zip(self.shape.iter()) {
-            res *= shape_i;
-            res += idx_i;
-        }
-        res
+        self.offset()
+            + idx
+                .as_ref()
+                .iter()
+                .zip(self.stride().iter())
+                .map(|(x, y)| x * y)
+                .sum::<usize>()
     }
 
     fn offset(&self) -> usize {
-        0
-    }
-
-    fn ndims(&self) -> usize {
-        self.shape.len()
-    }
-
-    fn size(&self) -> usize {
-        self.shape.iter().product()
+        self.offset
     }
 
     fn shape(&self) -> &[usize] {
         self.shape.as_slice()
+    }
+
+    fn stride(&self) -> &[usize] {
+        self.stride.as_slice()
+    }
+
+    fn is_contiguous(&self) -> bool {
+        true
     }
 }
 
@@ -50,14 +80,23 @@ mod test {
     use super::*;
 
     #[test]
-    fn simple_view_check_last_item() {
-        let view = SimpleView::new([2, 3, 4]);
-        assert_eq!(view.translate([1, 2, 3]), view.size() - 1);
+    fn contiguous_view_check() {
+        assert_eq!(ContiguousView::new([2, 3]).is_contiguous(), true);
     }
 
     #[test]
-    fn simple_view_translate() {
-        let view = SimpleView::new([2, 3, 4]);
+    fn contiguous_view_check_last_item() {
+        let view = ContiguousView::new([2, 3, 4]);
+        assert_eq!(view.translate([1, 2, 3]), view.numel() - 1);
+
+        let offset: usize = 5;
+        let view = ContiguousView::new_with_offset([2, 3, 4], offset);
+        assert_eq!(view.translate([1, 2, 3]), view.numel() - 1 + offset);
+    }
+
+    #[test]
+    fn contiguous_view_translate() {
+        let view = ContiguousView::new([2, 3, 4]);
         let mut counter = 0;
         for i in 0..2 {
             for j in 0..3 {
@@ -70,9 +109,9 @@ mod test {
     }
 
     #[test]
-    fn simple_view_ndims() {
-        assert_eq!(SimpleView::new([2]).ndims(), 1);
-        assert_eq!(SimpleView::new([2, 3]).ndims(), 2);
-        assert_eq!(SimpleView::new([2, 3, 4]).ndims(), 3);
+    fn contiguous_view_ndims() {
+        assert_eq!(ContiguousView::new([2]).ndim(), 1);
+        assert_eq!(ContiguousView::new([2, 3]).ndim(), 2);
+        assert_eq!(ContiguousView::new([2, 3, 4]).ndim(), 3);
     }
 }
