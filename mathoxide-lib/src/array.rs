@@ -12,31 +12,6 @@ pub struct Array<StorageType, ViewType> {
     view: ViewType,
 }
 
-impl<T, StorageType, ViewType> Array<StorageType, ViewType>
-where
-    T: Num,
-    StorageType: Storage<Stored = T>,
-    ViewType: ArrayView,
-{
-    fn offset(&self) -> usize {
-        self.view.offset()
-    }
-
-    // TODO: fn stride(&self) -> &[usize];
-
-    fn ndims(&self) -> usize {
-        self.view.ndims()
-    }
-
-    fn size(&self) -> usize {
-        self.view.size()
-    }
-
-    fn shape(&self) -> &[usize] {
-        self.view.shape()
-    }
-}
-
 impl<T, StorageType, ViewType> fmt::Display for Array<StorageType, ViewType>
 where
     T: Num + fmt::Display,
@@ -45,10 +20,32 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.storage.storage_get() {
-            // Difference between &[..] and as_slice? Why as_slice not working?
             Ok(arr) => VerboseFormatter::<'_, T, ViewType>::new(&arr[..], &self.view).format(f),
             Err(err) => write!(f, "error while formatting array: {}", err),
         }
+    }
+}
+
+impl<T, StorageType, ViewType> Array<StorageType, ViewType>
+where
+    T: Num,
+    StorageType: Storage<Stored = T>,
+    ViewType: ArrayView,
+{
+    pub fn offset(&self) -> usize {
+        self.view.offset()
+    }
+
+    pub fn ndims(&self) -> usize {
+        self.view.ndims()
+    }
+
+    pub fn size(&self) -> usize {
+        self.view.size()
+    }
+
+    pub fn shape(&self) -> &[usize] {
+        self.view.shape()
     }
 }
 
@@ -64,8 +61,6 @@ where
         let storage = StorageType::from(v);
         Array { storage, view }
     }
-
-    pub fn from_vector(vec: Vec<u32>) {}
 }
 
 #[cfg(test)]
@@ -80,8 +75,9 @@ mod test {
     }
 
     #[test]
-    fn create_from_vector() {
-        let array =
-            Array::<ThreadSafeStorage<u32>, views::SimpleView>::from_vector(vec![1, 2, 3, 4]);
+    fn check_2d_nrows_format() {
+        let array = Array::<ThreadSafeStorage<u32>, views::SimpleView>::zeros(&[4, 5]);
+        let formatted = array.to_string();
+        assert_eq!(formatted.split('\n').count(), array.shape()[0]);
     }
 }

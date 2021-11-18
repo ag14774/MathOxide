@@ -1,8 +1,6 @@
 #![feature(cell_filter_map)]
 #![feature(generic_associated_types)]
 
-extern crate num_traits;
-
 pub mod array;
 mod formatter;
 mod storage;

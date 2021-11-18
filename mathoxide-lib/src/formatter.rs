@@ -13,23 +13,25 @@ pub struct VerboseFormatter<'a, T, ViewType> {
 }
 
 impl<'a, T: Num, ViewType: ArrayView> VerboseFormatter<'a, T, ViewType> {
-    // How to do this with AsRef?
-    pub fn new(storage: &'a [T], view: &'a ViewType) -> Self {
-        VerboseFormatter::<'a, T, ViewType> { storage, view }
+    pub fn new<StorageType: AsRef<[T]> + ?Sized>(
+        storage: &'a StorageType,
+        view: &'a ViewType,
+    ) -> Self {
+        VerboseFormatter::<'a, T, ViewType> {
+            storage: storage.as_ref(),
+            view,
+        }
     }
 }
 
 impl<'a, T: Num + fmt::Display, ViewType: ArrayView> ArrayFormatter
     for VerboseFormatter<'a, T, ViewType>
 {
-    // TODO: Rewrite this when more helper methods are available
-    // Try to match numpy's behavior for ndarray formatting
     fn format(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.view.ndims() {
             2 => {
                 let mut s = String::new();
                 let nrows = self.view.shape()[0];
-                let ncols = self.view.shape()[1];
                 for row in 0usize..nrows {
                     let start = self.view.translate([row, 0]);
                     let end = self.view.translate([row + 1, 0]);
@@ -66,5 +68,3 @@ impl<'a, T: Num + fmt::Display, ViewType: ArrayView> ArrayFormatter
         }
     }
 }
-
-// TODO: ADD TESTS
