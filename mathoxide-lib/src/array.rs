@@ -69,12 +69,6 @@ mod test {
     use crate::thread_safe_storage::ThreadSafeStorage;
 
     #[test]
-    fn it_works() {
-        let array = Array::<ThreadSafeStorage<u32>, views::SimpleView>::zeros(&[4, 5]);
-        println!("{}", array);
-    }
-
-    #[test]
     fn check_2d_nrows_format() {
         let array = Array::<ThreadSafeStorage<u32>, views::SimpleView>::zeros(&[4, 5]);
         let formatted = array.to_string();
