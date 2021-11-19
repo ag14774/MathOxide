@@ -17,6 +17,7 @@ pub trait Storage: From<Vec<Self::Stored>> {
 
     fn storage_get<'a>(&'a self) -> Result<Self::Guard<'a>, &str>;
     fn storage_get_mut<'a>(&'a mut self) -> Result<Self::GuardMut<'a>, &str>;
+    fn storage_len(&self) -> Result<usize, &str>;
 }
 
 impl<T> Storage for ThreadSafeStorage<T> {
@@ -37,6 +38,10 @@ impl<T> Storage for ThreadSafeStorage<T> {
     fn storage_get_mut<'a>(&'a mut self) -> Result<Self::GuardMut<'a>, &str> {
         self.get_mut()
     }
+
+    fn storage_len(&self) -> Result<usize, &str> {
+        self.len()
+    }
 }
 
 impl<T> Storage for ThreadUnsafeStorage<T> {
@@ -56,6 +61,10 @@ impl<T> Storage for ThreadUnsafeStorage<T> {
 
     fn storage_get_mut<'a>(&'a mut self) -> Result<Self::GuardMut<'a>, &str> {
         Ok(RefMut::map(self.get_mut()?, |r| r.as_mut_slice()))
+    }
+
+    fn storage_len(&self) -> Result<usize, &str> {
+        self.len()
     }
 }
 

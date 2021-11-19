@@ -76,6 +76,13 @@ impl<T> ThreadSafeStorage<T> {
             self.data.lock().map_err(|_| "Mutex was poisoned")?,
         ))
     }
+
+    pub fn len(&self) -> Result<usize, &str> {
+        self.data
+            .lock()
+            .map_err(|_| "Mutex was poisoned")
+            .map(|v| v.len())
+    }
 }
 
 impl<T> From<Vec<T>> for ThreadSafeStorage<T> {
@@ -109,5 +116,13 @@ mod tests {
 
         let r = v1.get_mut().unwrap();
         assert_eq!(r[3], 13);
+    }
+
+    #[test]
+    fn size_works() {
+        let v = vec![1, 2, 3, 4];
+        let v = ThreadSafeStorage::new(v);
+
+        assert_eq!(v.len().unwrap(), 4);
     }
 }

@@ -24,6 +24,13 @@ impl<T> ThreadUnsafeStorage<T> {
             .try_borrow_mut()
             .map_err(|_| "Array is already borrowed")
     }
+
+    pub fn len(&self) -> Result<usize, &str> {
+        self.data
+            .try_borrow()
+            .map_err(|_| "Array is borrowed immutable")
+            .map(|v| v.len())
+    }
 }
 
 impl<T> From<Vec<T>> for ThreadUnsafeStorage<T> {
@@ -57,5 +64,13 @@ mod tests {
 
         let r = v1.get().unwrap()[3];
         assert_eq!(r, 13);
+    }
+
+    #[test]
+    fn size_works() {
+        let v = vec![1, 2, 3, 4];
+        let v = ThreadUnsafeStorage::new(v);
+
+        assert_eq!(v.len().unwrap(), 4);
     }
 }
