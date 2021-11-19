@@ -38,7 +38,7 @@ impl ContiguousView {
             .rev()
             .scan(1, |state, &x| {
                 let tmp = *state;
-                *state = *state * x;
+                *state *= x;
                 Some(tmp)
             })
             .collect::<Vec<usize>>();
@@ -88,7 +88,10 @@ mod test {
     fn contiguous_view_check_last_item() {
         let view = ContiguousView::new([2, 3, 4]);
         assert_eq!(view.translate([1, 2, 3]), view.numel() - 1);
+    }
 
+    #[test]
+    fn contiguous_view_offset_check_last_item() {
         let offset: usize = 5;
         let view = ContiguousView::new_with_offset([2, 3, 4], offset);
         assert_eq!(view.translate([1, 2, 3]), view.numel() - 1 + offset);
