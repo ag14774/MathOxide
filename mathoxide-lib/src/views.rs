@@ -82,7 +82,7 @@ impl ArrayView for ContiguousView {
     }
 
     fn translate_iter(&self) -> Self::IterType {
-        let begin = self.translate(vec![0; self.ndim()]);
+        let begin = self.offset();
         let end = begin + self.numel();
         ContiguousViewIterator::new(begin, end)
     }
