@@ -6,4 +6,5 @@ mod formatter;
 mod storage;
 mod thread_safe_storage;
 mod thread_unsafe_storage;
+mod view_iters;
 mod views;

@@ -28,7 +28,7 @@ impl<'a, T: Num + fmt::Display, ViewType: ArrayView> ArrayFormatter
     for VerboseFormatter<'a, T, ViewType>
 {
     fn format(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.view.ndims() {
+        match self.view.ndim() {
             2 => {
                 let mut s = String::new();
                 let nrows = self.view.shape()[0];
