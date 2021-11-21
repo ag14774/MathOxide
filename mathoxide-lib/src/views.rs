@@ -1,4 +1,8 @@
+use crate::view_iters::ContiguousViewIterator;
+
 pub trait ArrayView {
+    type IterType;
+
     fn translate<ListType: AsRef<[usize]>>(&self, idx: ListType) -> usize;
     fn offset(&self) -> usize;
     fn shape(&self) -> &[usize];
@@ -10,6 +14,7 @@ pub trait ArrayView {
         self.shape().iter().product()
     }
     fn is_contiguous(&self) -> bool;
+    fn translate_iter(&self) -> Self::IterType;
 }
 
 pub struct ContiguousView {
@@ -48,6 +53,8 @@ impl ContiguousView {
 }
 
 impl ArrayView for ContiguousView {
+    type IterType = ContiguousViewIterator;
+
     fn translate<ListType: AsRef<[usize]>>(&self, idx: ListType) -> usize {
         self.offset()
             + idx
@@ -72,6 +79,12 @@ impl ArrayView for ContiguousView {
 
     fn is_contiguous(&self) -> bool {
         true
+    }
+
+    fn translate_iter(&self) -> Self::IterType {
+        let begin = self.translate(vec![0; self.ndim()]);
+        let end = begin + self.numel();
+        ContiguousViewIterator::new(begin, end)
     }
 }
 
@@ -109,6 +122,18 @@ mod test {
                 }
             }
         }
+    }
+
+    #[test]
+    fn contiguous_view_translate_iter() {
+        let offset: usize = 5;
+        let view = ContiguousView::new_with_offset([2, 3, 4], offset);
+        let mut counter = 0;
+        for i in view.translate_iter() {
+            assert_eq!(i, counter + offset);
+            counter += 1;
+        }
+        assert_eq!(counter, view.numel());
     }
 
     #[test]
