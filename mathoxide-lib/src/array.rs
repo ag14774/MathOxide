@@ -56,7 +56,7 @@ where
     }
 
     pub fn storage_size(&self) -> usize {
-        self.storage.storage_get().iter().len()
+        self.storage.storage_len().expect("Cannot get array length")
     }
 }
 
