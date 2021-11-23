@@ -20,7 +20,7 @@ pub trait Storage: From<Vec<Self::Stored>> + Clone {
     fn storage_len(&self) -> Result<usize, &str>;
 }
 
-impl<T: Clone> Storage for ThreadSafeStorage<T> {
+impl<T> Storage for ThreadSafeStorage<T> {
     type Stored = T;
     type Guard<'a>
     where
@@ -44,7 +44,7 @@ impl<T: Clone> Storage for ThreadSafeStorage<T> {
     }
 }
 
-impl<T: Clone> Storage for ThreadUnsafeStorage<T> {
+impl<T> Storage for ThreadUnsafeStorage<T> {
     type Stored = T;
     type Guard<'a>
     where
