@@ -6,7 +6,7 @@ use crate::thread_safe_storage::{
 };
 use crate::thread_unsafe_storage::ThreadUnsafeStorage;
 
-pub trait Storage: From<Vec<Self::Stored>> {
+pub trait Storage: From<Vec<Self::Stored>> + Clone {
     type Stored;
     type Guard<'a>: Deref<Target = [Self::Stored]>
     where
@@ -20,7 +20,7 @@ pub trait Storage: From<Vec<Self::Stored>> {
     fn storage_len(&self) -> Result<usize, &str>;
 }
 
-impl<T> Storage for ThreadSafeStorage<T> {
+impl<T: Clone> Storage for ThreadSafeStorage<T> {
     type Stored = T;
     type Guard<'a>
     where
@@ -44,7 +44,7 @@ impl<T> Storage for ThreadSafeStorage<T> {
     }
 }
 
-impl<T> Storage for ThreadUnsafeStorage<T> {
+impl<T: Clone> Storage for ThreadUnsafeStorage<T> {
     type Stored = T;
     type Guard<'a>
     where
