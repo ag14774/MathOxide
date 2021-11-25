@@ -1,12 +1,12 @@
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 pub(crate) struct ThreadSafeStorageGuard<'a, T> {
-    _guard: MutexGuard<'a, Vec<T>>,
+    _guard: RwLockReadGuard<'a, Vec<T>>,
     r: *const [T],
 }
 
 impl<'a, T> ThreadSafeStorageGuard<'a, T> {
-    fn new(guard: MutexGuard<'a, Vec<T>>) -> Self {
+    fn new(guard: RwLockReadGuard<'a, Vec<T>>) -> Self {
         let r = guard.as_slice() as *const [T];
         Self { _guard: guard, r }
     }
@@ -24,12 +24,12 @@ impl<'a, T> std::ops::Deref for ThreadSafeStorageGuard<'a, T> {
 }
 
 pub(crate) struct ThreadSafeStorageGuardMut<'a, T> {
-    _guard: MutexGuard<'a, Vec<T>>,
+    _guard: RwLockWriteGuard<'a, Vec<T>>,
     r: *mut [T],
 }
 
 impl<'a, T> ThreadSafeStorageGuardMut<'a, T> {
-    fn new(mut guard: MutexGuard<'a, Vec<T>>) -> Self {
+    fn new(mut guard: RwLockWriteGuard<'a, Vec<T>>) -> Self {
         let r = guard.as_mut_slice() as *mut [T];
         Self { _guard: guard, r }
     }
@@ -55,32 +55,32 @@ impl<'a, T> std::ops::DerefMut for ThreadSafeStorageGuardMut<'a, T> {
 
 #[derive(Clone)]
 pub(crate) struct ThreadSafeStorage<T> {
-    data: Arc<Mutex<Vec<T>>>,
+    data: Arc<RwLock<Vec<T>>>,
 }
 
 impl<T> ThreadSafeStorage<T> {
     pub fn new(v: Vec<T>) -> Self {
         Self {
-            data: Arc::new(Mutex::new(v)),
+            data: Arc::new(RwLock::new(v)),
         }
     }
 
     pub fn get(&self) -> Result<ThreadSafeStorageGuard<T>, &str> {
         Ok(ThreadSafeStorageGuard::new(
-            self.data.lock().map_err(|_| "Mutex was poisoned")?,
+            self.data.read().map_err(|_| "RwLock was poisoned")?,
         ))
     }
 
     pub fn get_mut(&mut self) -> Result<ThreadSafeStorageGuardMut<T>, &str> {
         Ok(ThreadSafeStorageGuardMut::new(
-            self.data.lock().map_err(|_| "Mutex was poisoned")?,
+            self.data.write().map_err(|_| "RwLock was poisoned")?,
         ))
     }
 
     pub fn len(&self) -> Result<usize, &str> {
         self.data
-            .lock()
-            .map_err(|_| "Mutex was poisoned")
+            .read()
+            .map_err(|_| "RwLock was poisoned")
             .map(|v| v.len())
     }
 }
