@@ -6,7 +6,7 @@ use crate::thread_safe_storage::{
 };
 use crate::thread_unsafe_storage::ThreadUnsafeStorage;
 
-pub trait Storage: From<Vec<Self::Stored>> {
+pub trait Storage: From<Vec<Self::Stored>> + Clone {
     type Stored;
     type Guard<'a>: Deref<Target = [Self::Stored]>
     where

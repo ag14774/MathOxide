@@ -53,7 +53,6 @@ impl<'a, T> std::ops::DerefMut for ThreadSafeStorageGuardMut<'a, T> {
     }
 }
 
-#[derive(Clone)]
 pub(crate) struct ThreadSafeStorage<T> {
     data: Arc<Mutex<Vec<T>>>,
 }
@@ -88,6 +87,14 @@ impl<T> ThreadSafeStorage<T> {
 impl<T> From<Vec<T>> for ThreadSafeStorage<T> {
     fn from(val: Vec<T>) -> Self {
         ThreadSafeStorage::new(val)
+    }
+}
+
+impl<T> Clone for ThreadSafeStorage<T> {
+    fn clone(&self) -> Self {
+        Self {
+            data: Arc::clone(&self.data),
+        }
     }
 }
 

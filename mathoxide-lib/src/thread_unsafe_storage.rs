@@ -1,7 +1,6 @@
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::Rc;
 
-#[derive(Clone)]
 pub(crate) struct ThreadUnsafeStorage<T> {
     data: Rc<RefCell<Vec<T>>>,
 }
@@ -36,6 +35,14 @@ impl<T> ThreadUnsafeStorage<T> {
 impl<T> From<Vec<T>> for ThreadUnsafeStorage<T> {
     fn from(val: Vec<T>) -> Self {
         ThreadUnsafeStorage::new(val)
+    }
+}
+
+impl<T> Clone for ThreadUnsafeStorage<T> {
+    fn clone(&self) -> Self {
+        Self {
+            data: Rc::clone(&self.data),
+        }
     }
 }
 

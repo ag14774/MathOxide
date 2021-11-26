@@ -3,6 +3,7 @@ use std::fmt;
 use num_traits::Num;
 
 use crate::formatter::{ArrayFormatter, VerboseFormatter};
+use crate::shape_utils::{infer_shape, ShapeDim};
 use crate::storage::Storage;
 use crate::views::{ArrayView, ContiguousView};
 
@@ -72,6 +73,27 @@ where
         let storage = StorageType::from(v);
         Array { storage, view }
     }
+
+    pub fn reshape<SizeType, ListType>(&self, shape: ListType) -> Self
+    where
+        SizeType: Copy,
+        ShapeDim: From<SizeType>,
+        ListType: AsRef<[SizeType]>,
+    {
+        let new_shape = infer_shape(shape, self.numel()).expect("error while inferring shape");
+        if new_shape.iter().product::<usize>() != self.numel() {
+            panic!(
+                "{:?} not a valid shape for array of size {}",
+                new_shape,
+                self.numel()
+            );
+        }
+        let view = ContiguousView::new_with_offset(new_shape, self.storage_offset());
+        Array {
+            storage: self.storage.clone(),
+            view,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -84,5 +106,19 @@ mod test {
         let array = Array::<ThreadSafeStorage<u32>, ContiguousView>::zeros(&[4, 5]);
         let formatted = array.to_string();
         assert_eq!(formatted.split('\n').count(), array.shape()[0]);
+    }
+
+    #[test]
+    fn reshape_2d_to_1d() {
+        let array = Array::<ThreadSafeStorage<u32>, ContiguousView>::zeros(&[2, 3]);
+        let row_vec = array.reshape([6usize]);
+        assert_eq!(row_vec.shape(), &[6]);
+    }
+
+    #[test]
+    fn reshape_2d_to_1d_inferred() {
+        let array = Array::<ThreadSafeStorage<u32>, ContiguousView>::zeros(&[2, 3]);
+        let row_vec = array.reshape([-1isize]);
+        assert_eq!(row_vec.shape(), &[6]);
     }
 }
