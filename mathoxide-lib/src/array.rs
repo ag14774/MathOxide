@@ -59,6 +59,43 @@ where
     pub fn storage_size(&self) -> usize {
         self.storage.storage_len().expect("Cannot get array length")
     }
+
+    pub fn get<ListType: AsRef<[usize]>>(
+        &self,
+        idx: ListType,
+    ) -> Array<StorageType, ContiguousView> {
+        let offset = match self.view.try_translate(&idx) {
+            Ok(u) => u,
+            Err(_) => panic!(
+                "Index {:?} is not valid for a view with shape {:?}",
+                idx.as_ref(),
+                self.shape()
+            ),
+        };
+        let view = ContiguousView::new_with_offset([1], offset);
+        Array {
+            storage: self.storage.clone(),
+            view,
+        }
+    }
+}
+
+impl<T, StorageType, ViewType> Array<StorageType, ViewType>
+where
+    T: Num + Clone,
+    StorageType: Storage<Stored = T>,
+    ViewType: ArrayView,
+{
+    pub fn item(&self) -> StorageType::Stored {
+        if self.numel() > 1 {
+            panic!("'item()' can only be run on arrays of size 1");
+        }
+        let offset = self.storage_offset();
+        self.storage
+            .storage_get()
+            .expect("error while getting storage")[offset]
+            .clone()
+    }
 }
 
 impl<T, StorageType> Array<StorageType, ContiguousView>
@@ -100,6 +137,22 @@ where
 mod test {
     use super::*;
     use crate::thread_safe_storage::ThreadSafeStorage;
+
+    #[test]
+    fn check_all_zeros() {
+        let array = Array::<ThreadSafeStorage<u32>, ContiguousView>::zeros(&[4, 5]);
+        let array = array.reshape([-1isize]);
+        for i in 0..20 {
+            assert_eq!(array.get([i]).item(), 0);
+        }
+    }
+
+    #[test]
+    fn item_panic() {
+        let array = Array::<ThreadSafeStorage<u32>, ContiguousView>::zeros(&[4, 5]);
+        let result = std::panic::catch_unwind(|| array.item());
+        assert!(result.is_err());
+    }
 
     #[test]
     fn check_2d_nrows_format() {
