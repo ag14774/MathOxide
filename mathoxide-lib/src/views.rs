@@ -10,11 +10,7 @@ pub trait ArrayView {
             .iter()
             .zip(self.shape().iter())
             .all(|(idx_i, shape_i)| idx_i < shape_i);
-        if valid {
-            Some(self.translate(idx))
-        } else {
-            None
-        }
+        valid.then(|| self.translate(idx))
     }
     fn offset(&self) -> usize;
     fn shape(&self) -> &[usize];
