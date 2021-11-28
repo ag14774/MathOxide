@@ -4,16 +4,16 @@ pub trait ArrayView {
     type IterType;
 
     fn translate<ListType: AsRef<[usize]>>(&self, idx: ListType) -> usize;
-    fn try_translate<ListType: AsRef<[usize]>>(&self, idx: ListType) -> Result<usize, &str> {
+    fn checked_translate<ListType: AsRef<[usize]>>(&self, idx: ListType) -> Option<usize> {
         let valid = idx
             .as_ref()
             .iter()
             .zip(self.shape().iter())
             .all(|(idx_i, shape_i)| idx_i < shape_i);
         if valid {
-            Ok(self.translate(idx))
+            Some(self.translate(idx))
         } else {
-            Err("invalid shape")
+            None
         }
     }
     fn offset(&self) -> usize;

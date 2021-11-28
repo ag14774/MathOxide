@@ -64,14 +64,13 @@ where
         &self,
         idx: ListType,
     ) -> Array<StorageType, ContiguousView> {
-        let offset = match self.view.try_translate(&idx) {
-            Ok(u) => u,
-            Err(_) => panic!(
+        let offset = self.view.checked_translate(&idx).unwrap_or_else(|| {
+            panic!(
                 "Index {:?} is not valid for a view with shape {:?}",
                 idx.as_ref(),
                 self.shape()
-            ),
-        };
+            )
+        });
         let view = ContiguousView::new_with_offset([1], offset);
         Array {
             storage: self.storage.clone(),
@@ -151,6 +150,13 @@ mod test {
     fn item_panic() {
         let array = Array::<ThreadSafeStorage<u32>, ContiguousView>::zeros(&[4, 5]);
         let result = std::panic::catch_unwind(|| array.item());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn get_panic() {
+        let array = Array::<ThreadSafeStorage<u32>, ContiguousView>::zeros(&[4, 5]);
+        let result = std::panic::catch_unwind(|| array.get([4, 5]));
         assert!(result.is_err());
     }
 
