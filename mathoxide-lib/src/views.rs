@@ -4,6 +4,14 @@ pub trait ArrayView {
     type IterType;
 
     fn translate<ListType: AsRef<[usize]>>(&self, idx: ListType) -> usize;
+    fn checked_translate<ListType: AsRef<[usize]>>(&self, idx: ListType) -> Option<usize> {
+        let valid = idx
+            .as_ref()
+            .iter()
+            .zip(self.shape().iter())
+            .all(|(idx_i, shape_i)| idx_i < shape_i);
+        valid.then(|| self.translate(idx))
+    }
     fn offset(&self) -> usize;
     fn shape(&self) -> &[usize];
     fn stride(&self) -> &[usize];
