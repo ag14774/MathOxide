@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 enum IndexState {
     NotStarted,
     InProgress,
@@ -12,7 +11,7 @@ pub enum UpdaterResult {
 
 type UpdaterType = fn(&mut Vec<usize>, &[usize]) -> UpdaterResult;
 
-struct IndexIteration<'a> {
+pub struct IndexIteration<'a> {
     shape: &'a [usize],
     index: Vec<usize>,
     state: IndexState,
