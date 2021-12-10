@@ -34,17 +34,11 @@ impl<'a> IndexIteration<'a>
         }
     }
 
-    pub fn by_column<Shape>(shape: &'a Shape) -> Self
+    pub fn row_major<Shape>(shape: &'a Shape) -> Self
     where
         Shape: AsRef<[usize]>,
     {
-        let shape = shape.as_ref();
-        Self {
-            shape,
-            index: vec![0; shape.len()],
-            state: IndexState::NotStarted,
-            updater: update_index_by_column,
-        }
+            Self::new(shape, update_index_row_major)
     }
 
     pub fn next<'b>(&'b mut self) -> Option<&'b [usize]>
@@ -69,7 +63,7 @@ impl<'a> IndexIteration<'a>
     }
 }
 
-pub fn update_index_by_column<Shape: AsRef<[usize]> +?Sized >(index: &mut Vec<usize>, shape: &Shape) -> UpdaterResult {
+pub fn update_index_row_major<Shape: AsRef<[usize]> +?Sized >(index: &mut Vec<usize>, shape: &Shape) -> UpdaterResult {
     let shape = shape.as_ref();
 
     let ndim = shape.len();
@@ -98,7 +92,7 @@ mod test {
     fn update_by_column_simple_test() {
         let mut index = vec![0, 0];
         let mut count = 0;
-        while let UpdaterResult::NotDone = update_index_by_column(&mut index, &[1,1]) {
+        while let UpdaterResult::NotDone = update_index_row_major(&mut index, &[1,1]) {
             assert_eq!(index.as_slice(), &[0,0]);
             count += 1;
         }
@@ -115,7 +109,7 @@ mod test {
                 for k in 0..4 {
                     for l in 0..17 {
                         assert_eq!(index.as_slice(), &[i, j, k, l]);
-                        if let UpdaterResult::Done = update_index_by_column(&mut index, &[2, 3, 4, 17]) {
+                        if let UpdaterResult::Done = update_index_row_major(&mut index, &[2, 3, 4, 17]) {
                             break;
                         }
                     }
@@ -128,7 +122,7 @@ mod test {
   
     #[test]
     fn by_column_iteration_wrapper_exhaustive() {
-        let mut index_wrapper = IndexIteration::by_column(&[2,3,4,17]);
+        let mut index_wrapper = IndexIteration::row_major(&[2,3,4,17]);
         for i in 0..2 {
             for j in 0..3 {
                 for k in 0..4 {
@@ -145,7 +139,7 @@ mod test {
 
     #[test]
     fn by_column_iteration_wrapper_no_more() {
-        let mut index_wrapper = IndexIteration::by_column(&[2,3,4,17]);
+        let mut index_wrapper = IndexIteration::row_major(&[2,3,4,17]);
         let mut count = 0;
         while let Some(_) = index_wrapper.next() {
             count += 1;
