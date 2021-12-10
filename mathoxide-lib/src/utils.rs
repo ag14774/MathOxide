@@ -1,39 +1,92 @@
-pub struct ByRowIterator {
-    shape: Vec<usize>,
-    current: usize,
-    numel: usize,
+enum IndexState {
+    NotStarted,
+    InProgress,
+    Finished,
 }
 
-impl Iterator for ByRowIterator {
-    type Item = Vec<usize>;
+pub enum UpdaterResult {
+    NotDone,
+    Done,
+}
 
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.current >= self.numel {
-            None
-        } else {
-            let v = inverse_translate(self.current, &self.shape);
-            self.current += 1;
-            Some(v)
+type UpdaterType = fn(&mut Vec<usize>, &[usize]) -> UpdaterResult;
+
+struct IndexIteration<'a>
+{
+    shape: &'a [usize],
+    index: Vec<usize>,
+    state: IndexState,
+    updater: UpdaterType,
+}
+
+impl<'a> IndexIteration<'a>
+{
+    fn new<Shape>(shape: &'a Shape, updater: UpdaterType) -> Self
+    where
+        Shape: AsRef<[usize]>,
+    {
+        let shape = shape.as_ref();
+        Self {
+            shape,
+            index: vec![0; shape.len()],
+            state: IndexState::NotStarted,
+            updater,
+        }
+    }
+
+    pub fn by_column<Shape>(shape: &'a Shape) -> Self
+    where
+        Shape: AsRef<[usize]>,
+    {
+        let shape = shape.as_ref();
+        Self {
+            shape,
+            index: vec![0; shape.len()],
+            state: IndexState::NotStarted,
+            updater: update_index_by_column,
+        }
+    }
+
+    pub fn next<'b>(&'b mut self) -> Option<&'b [usize]>
+    where
+        'a: 'b
+    {
+        match self.state {
+            IndexState::NotStarted => {
+                self.state = IndexState::InProgress;
+                Some(self.index.as_slice())
+            }
+            IndexState::InProgress => {
+                if let UpdaterResult::NotDone = (self.updater)(&mut self.index, &self.shape) {
+                    Some(self.index.as_slice())
+                } else {
+                    self.state = IndexState::Finished;
+                    None
+                }
+            }
+            IndexState::Finished => None,
         }
     }
 }
 
-fn inverse_translate<Shape: AsRef<[usize]>>(idx: usize, shape: Shape) -> Vec<usize> {
-    shape.as_ref().iter().rev().scan((1, 0), |(divisor, remainder), e| {
-        let prev_div = *divisor;
-        *divisor *= e;
-        let res = ((idx - *remainder) % *divisor) / prev_div;
-        *remainder += res;
-        Some(res)
-    }).collect()
-}
+pub fn update_index_by_column<Shape: AsRef<[usize]> +?Sized >(index: &mut Vec<usize>, shape: &Shape) -> UpdaterResult {
+    let shape = shape.as_ref();
 
+    let ndim = shape.len();
+    let mut carry: usize = 1;
+    let mut pointer: usize = 0;
 
-pub fn iterate_by_column<Shape: AsRef<[usize]>>(shape: &Shape) -> ByRowIterator {
-    ByRowIterator {
-        numel: shape.as_ref().iter().product(),
-        shape: shape.as_ref().clone().into(),
-        current: 0,
+    while carry == 1 && pointer < ndim {
+        index[ndim - pointer - 1] += carry;
+        carry = index[ndim - pointer - 1] / shape[ndim - pointer - 1];
+        index[ndim - pointer - 1] %= shape[ndim - pointer - 1];
+        pointer += 1;
+    }
+    if carry == 1 {
+        UpdaterResult::Done
+    }
+    else {
+        UpdaterResult::NotDone
     }
 }
 
@@ -42,36 +95,61 @@ mod test {
     use super::*;
 
     #[test]
-    fn it_works() {
+    fn update_by_column_simple_test() {
+        let mut index = vec![0, 0];
         let mut count = 0;
-        for indices in iterate_by_column(&[1,1]) {
-            assert_eq!(indices.as_slice(), &[0,0]);
+        while let UpdaterResult::NotDone = update_index_by_column(&mut index, &[1,1]) {
+            assert_eq!(index.as_slice(), &[0,0]);
             count += 1;
         }
 
-        assert_eq!(count, 1);
+        assert_eq!(count, 0);
     }
 
     #[test]
     fn returns_correct_indices() {
-        let mut iterator = iterate_by_column(&[2, 3, 4, 17]);
-
-        for l in 0..2 {
-            for k in 0..3 {
-                for j in 0..4 {
-                    for i in 0..17 {
-                        let res = iterator.next().unwrap();
-                        assert_eq!(res.as_slice(), &[i, j, k, l]);
+        let mut index = vec![0, 0, 0, 0];
+  
+        for i in 0..2 {
+            for j in 0..3 {
+                for k in 0..4 {
+                    for l in 0..17 {
+                        assert_eq!(index.as_slice(), &[i, j, k, l]);
+                        if let UpdaterResult::Done = update_index_by_column(&mut index, &[2, 3, 4, 17]) {
+                            break;
+                        }
                     }
                 }
             }
         }
-
-        assert!(iterator.next().is_none());
+  
+        assert_eq!(index.as_slice(), &[0, 0, 0, 0]);
+    }
+  
+    #[test]
+    fn by_column_iteration_wrapper_exhaustive() {
+        let mut index_wrapper = IndexIteration::by_column(&[2,3,4,17]);
+        for i in 0..2 {
+            for j in 0..3 {
+                for k in 0..4 {
+                    for l in 0..17 {
+                        let res = index_wrapper.next().unwrap();
+                        assert_eq!(res, &[i, j, k, l]);
+                    }
+                }
+            }
+        }
+        assert_eq!(index_wrapper.next(), None);
+        assert_eq!(index_wrapper.next(), None);
     }
 
     #[test]
-    fn accepts_run_time_indices() {
-        let _iterator = iterate_by_column(&vec![2,3,4,17]);
+    fn by_column_iteration_wrapper_no_more() {
+        let mut index_wrapper = IndexIteration::by_column(&[2,3,4,17]);
+        let mut count = 0;
+        while let Some(_) = index_wrapper.next() {
+            count += 1;
+        }
+        assert_eq!(count, 2 * 3 * 4 * 17);
     }
 }
