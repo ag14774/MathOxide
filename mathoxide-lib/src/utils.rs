@@ -23,7 +23,7 @@ impl<'a> IndexIteration<'a>
 {
     fn new<Shape>(shape: &'a Shape, updater: UpdaterType) -> Self
     where
-        Shape: AsRef<[usize]>,
+        Shape: AsRef<[usize]> + ?Sized,
     {
         let shape = shape.as_ref();
         Self {
@@ -36,7 +36,7 @@ impl<'a> IndexIteration<'a>
 
     pub fn row_major<Shape>(shape: &'a Shape) -> Self
     where
-        Shape: AsRef<[usize]>,
+        Shape: AsRef<[usize]> + ?Sized,
     {
             Self::new(shape, update_index_row_major)
     }
@@ -145,5 +145,11 @@ mod test {
             count += 1;
         }
         assert_eq!(count, 2 * 3 * 4 * 17);
+    }
+
+    #[test]
+    fn iteration_wrapper_does_not_need_sized_shape() {
+        let v = vec![2, 3, 4, 17];
+        let _index_wrapper = IndexIteration::row_major(v.as_slice());
     }
 }
