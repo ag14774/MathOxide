@@ -7,6 +7,6 @@ mod shape_utils;
 mod storage;
 mod thread_safe_storage;
 mod thread_unsafe_storage;
+mod utils;
 mod view_iters;
 mod views;
-mod utils;

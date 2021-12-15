@@ -11,16 +11,14 @@ pub enum UpdaterResult {
 
 type UpdaterType = fn(&mut Vec<usize>, &[usize]) -> UpdaterResult;
 
-struct IndexIteration<'a>
-{
+struct IndexIteration<'a> {
     shape: &'a [usize],
     index: Vec<usize>,
     state: IndexState,
     updater: UpdaterType,
 }
 
-impl<'a> IndexIteration<'a>
-{
+impl<'a> IndexIteration<'a> {
     fn new<Shape>(shape: &'a Shape, updater: UpdaterType) -> Self
     where
         Shape: AsRef<[usize]> + ?Sized,
@@ -38,12 +36,12 @@ impl<'a> IndexIteration<'a>
     where
         Shape: AsRef<[usize]> + ?Sized,
     {
-            Self::new(shape, update_index_row_major)
+        Self::new(shape, update_index_row_major)
     }
 
     pub fn next<'b>(&'b mut self) -> Option<&'b [usize]>
     where
-        'a: 'b
+        'a: 'b,
     {
         match self.state {
             IndexState::NotStarted => {
@@ -63,7 +61,10 @@ impl<'a> IndexIteration<'a>
     }
 }
 
-pub fn update_index_row_major<Shape: AsRef<[usize]> +?Sized >(index: &mut Vec<usize>, shape: &Shape) -> UpdaterResult {
+pub fn update_index_row_major<Shape: AsRef<[usize]> + ?Sized>(
+    index: &mut Vec<usize>,
+    shape: &Shape,
+) -> UpdaterResult {
     let shape = shape.as_ref();
 
     let ndim = shape.len();
@@ -78,8 +79,7 @@ pub fn update_index_row_major<Shape: AsRef<[usize]> +?Sized >(index: &mut Vec<us
     }
     if carry == 1 {
         UpdaterResult::Done
-    }
-    else {
+    } else {
         UpdaterResult::NotDone
     }
 }
@@ -92,8 +92,8 @@ mod test {
     fn update_by_column_simple_test() {
         let mut index = vec![0, 0];
         let mut count = 0;
-        while let UpdaterResult::NotDone = update_index_row_major(&mut index, &[1,1]) {
-            assert_eq!(index.as_slice(), &[0,0]);
+        while let UpdaterResult::NotDone = update_index_row_major(&mut index, &[1, 1]) {
+            assert_eq!(index.as_slice(), &[0, 0]);
             count += 1;
         }
 
@@ -103,26 +103,28 @@ mod test {
     #[test]
     fn returns_correct_indices() {
         let mut index = vec![0, 0, 0, 0];
-  
+
         for i in 0..2 {
             for j in 0..3 {
                 for k in 0..4 {
                     for l in 0..17 {
                         assert_eq!(index.as_slice(), &[i, j, k, l]);
-                        if let UpdaterResult::Done = update_index_row_major(&mut index, &[2, 3, 4, 17]) {
+                        if let UpdaterResult::Done =
+                            update_index_row_major(&mut index, &[2, 3, 4, 17])
+                        {
                             break;
                         }
                     }
                 }
             }
         }
-  
+
         assert_eq!(index.as_slice(), &[0, 0, 0, 0]);
     }
-  
+
     #[test]
     fn by_column_iteration_wrapper_exhaustive() {
-        let mut index_wrapper = IndexIteration::row_major(&[2,3,4,17]);
+        let mut index_wrapper = IndexIteration::row_major(&[2, 3, 4, 17]);
         for i in 0..2 {
             for j in 0..3 {
                 for k in 0..4 {
@@ -139,7 +141,7 @@ mod test {
 
     #[test]
     fn by_column_iteration_wrapper_no_more() {
-        let mut index_wrapper = IndexIteration::row_major(&[2,3,4,17]);
+        let mut index_wrapper = IndexIteration::row_major(&[2, 3, 4, 17]);
         let mut count = 0;
         while let Some(_) = index_wrapper.next() {
             count += 1;
