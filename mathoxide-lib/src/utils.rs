@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 enum IndexState {
     NotStarted,
     InProgress,
@@ -49,7 +50,7 @@ impl<'a> IndexIteration<'a> {
                 Some(self.index.as_slice())
             }
             IndexState::InProgress => {
-                if let UpdaterResult::NotDone = (self.updater)(&mut self.index, &self.shape) {
+                if let UpdaterResult::NotDone = (self.updater)(&mut self.index, self.shape) {
                     Some(self.index.as_slice())
                 } else {
                     self.state = IndexState::Finished;
