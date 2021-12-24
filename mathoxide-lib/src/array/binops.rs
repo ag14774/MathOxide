@@ -6,13 +6,13 @@ use crate::thread_unsafe_storage::ThreadUnsafeStorage;
 use crate::utils::IndexIteration;
 use crate::views::{ArrayView, ContiguousView};
 
-impl<Stored, StorageType, ViewType, RhsStorage, RhsStored, RhsViewType, OutputStored>
+impl<Stored, StorageType, ViewType, RhsStored, RhsStorage, RhsViewType, OutputStored>
     std::ops::Add<&Array<RhsStorage, RhsViewType>> for &Array<StorageType, ViewType>
 where
     RhsStorage: Storage<Stored = RhsStored>,
     RhsStored: Num,
     RhsViewType: ArrayView,
-    Stored: Num + std::ops::Add<RhsStored, Output = OutputStored>,
+    Stored: Num,
     StorageType: Storage<Stored = Stored>,
     ViewType: ArrayView,
     OutputStored: Num,
@@ -28,15 +28,21 @@ where
         let mut result: Self::Output = Array::zeros(self.shape());
         let mut index_iteration = IndexIteration::row_major(self.shape());
 
+        let lhs_storage = self.storage.storage_get().unwrap();
+        let rhs_storage = rhs.storage.storage_get().unwrap();
+        let mut result_storage = result.storage.storage_get_mut().unwrap();
+
         while let Some(dim_index) = index_iteration.next() {
             let res_index = result.view.translate(dim_index);
             let lhs_index = self.view.translate(dim_index);
             let rhs_index = rhs.view.translate(dim_index);
-            let sum = &self.storage.storage_get().unwrap()[lhs_index]
-                + &rhs.storage.storage_get().unwrap()[rhs_index];
-            result.storage.storage_get_mut().unwrap()[res_index] = sum;
+
+            let sum = &lhs_storage[lhs_index] + &rhs_storage[rhs_index];
+            result_storage[res_index] = sum;
         }
 
+        // We need to drop the borrow on result before returning it.
+        drop(result_storage);
         result
     }
 }
@@ -67,7 +73,7 @@ mod test {
     }
 
     #[test]
-    fn panic_on_differn_shape() {
+    fn panic_on_different_shape() {
         let result = std::panic::catch_unwind(|| {
             let array1 = Array::<ThreadUnsafeStorage<u32>, ContiguousView>::zeros(&[4, 5]);
             let array2 = Array::<ThreadUnsafeStorage<u32>, ContiguousView>::zeros(&[7, 5]);
