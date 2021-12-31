@@ -1,3 +1,5 @@
+mod binops;
+
 use std::fmt;
 
 use num_traits::Num;

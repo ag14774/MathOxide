@@ -1,30 +1,30 @@
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::Rc;
 
-pub(crate) struct ThreadUnsafeStorage<T> {
+pub struct ThreadUnsafeStorage<T> {
     data: Rc<RefCell<Vec<T>>>,
 }
 
 impl<T> ThreadUnsafeStorage<T> {
-    pub fn new(v: Vec<T>) -> Self {
+    pub(crate) fn new(v: Vec<T>) -> Self {
         Self {
             data: Rc::new(RefCell::new(v)),
         }
     }
 
-    pub fn get(&self) -> Result<Ref<Vec<T>>, &str> {
+    pub(crate) fn get(&self) -> Result<Ref<Vec<T>>, &str> {
         self.data
             .try_borrow()
             .map_err(|_| "Array is borrowed immutable")
     }
 
-    pub fn get_mut(&mut self) -> Result<RefMut<Vec<T>>, &str> {
+    pub(crate) fn get_mut(&mut self) -> Result<RefMut<Vec<T>>, &str> {
         self.data
             .try_borrow_mut()
             .map_err(|_| "Array is already borrowed")
     }
 
-    pub fn len(&self) -> Result<usize, &str> {
+    pub(crate) fn len(&self) -> Result<usize, &str> {
         self.data
             .try_borrow()
             .map_err(|_| "Array is borrowed immutable")
