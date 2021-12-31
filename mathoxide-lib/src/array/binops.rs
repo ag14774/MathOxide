@@ -40,9 +40,8 @@ where
             let sum = &lhs_storage[lhs_index] + &rhs_storage[rhs_index];
             result_storage[res_index] = sum;
         }
-
-        // We need to drop the borrow on result before returning it.
         drop(result_storage);
+
         result
     }
 }
